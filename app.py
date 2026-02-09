@@ -4,7 +4,7 @@ from calculator import calculate, make_sphere_fig
 
 st.set_page_config(
     page_title="LED Sphere Spec Calculator",
-    page_icon="Yenrich.png",
+    page_icon="yenrich.png",
     layout="wide"
 )
 
@@ -14,7 +14,7 @@ st.set_page_config(
 header_col1, header_col2 = st.columns([1, 6])
 
 with header_col1:
-    st.image("Yenrich.png", width=160)
+    st.image("yenrich.png", width=160)
 
 with header_col2:
     st.markdown(
