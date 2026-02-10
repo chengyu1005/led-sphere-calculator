@@ -86,6 +86,8 @@ def calculate(param: dict) -> dict:
     fov_v_n_final = n_vertical_n * angle_per_module_v
     fov_v_s_final = n_vertical_s * angle_per_module_v
 
+    display_area = abs(2 * math.pi * (diameter/2000) * (diameter/2000) * (math.sin(fov_v_n_final / 180 * math.pi)+math.sin(fov_v_s_final / 180 * math.pi)) * fov_h / 360)
+
     if px_per_module_h * px_per_module_v * 8 <= receiver_capacity:
         n_module_per_receiver = 8
     elif px_per_module_h * px_per_module_v * 4 <= receiver_capacity:
@@ -207,6 +209,7 @@ def calculate(param: dict) -> dict:
         "n_vertical_s": n_vertical_s,
         "fov_v_n_final": fov_v_n_final,
         "fov_v_s_final": fov_v_s_final,
+        "display_area": display_area,
 
         # data
         "n_module_per_receiver": n_module_per_receiver,

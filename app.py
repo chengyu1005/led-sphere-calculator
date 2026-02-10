@@ -169,6 +169,7 @@ if st.session_state.get("did_run", False) and st.session_state.result is not Non
     spec_df = pd.DataFrame({
         "Product": [
             "Sphere Diameter (m)",
+            "Display area (m2)",
             "Pixel Pitch (mm)",
             "Resolution (H)",
             "Resolution (V)",
@@ -176,12 +177,14 @@ if st.session_state.get("did_run", False) and st.session_state.result is not Non
             "Sphere FOV (V)",
             "Module Types",
             "Maximum Module Size (mm)",
+            "Module Qty",
             "Hub Qty (with PSU/RX)",
             "Brightness (nits)",
             "Total Power (kW)"
         ],
         "Dome Display": [
             round(param["diameter"] / 1000, 2),
+            round(result["display_area"], 2),
             round(result["pitch_mm"], 2),
             int(param["resolution_h"]),
             int(result["resolution_v_px"]),
@@ -189,6 +192,7 @@ if st.session_state.get("did_run", False) and st.session_state.result is not Non
             round(result["fov_v_deg"], 2),
             int(result["n_vertical_final"]),
             f'{result["width_per_module_mm"]:.2f} x {result["height_per_module_mm"]:.2f}',
+            int(result["total_n_module"]),
             int(result["total_n_hub"]),
             round(param["luminance"], 1),
             round(result["total_power_W"], 2)
@@ -247,4 +251,4 @@ if st.session_state.get("did_run", False) and st.session_state.result is not Non
             st.rerun()
 
 else:
-    st.info("Fill in the parameters on the left and click Calculate.")
+    st.info("Click the >> button in the top-left corner, fill in the parameters and click Calculate.")
