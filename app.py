@@ -2,10 +2,19 @@ import pandas as pd
 import streamlit as st
 from calculator import calculate, make_sphere_fig
 
+# =============================
+# Session State (init)
+# =============================
+if "sidebar_state" not in st.session_state:
+    st.session_state.sidebar_state = "expanded"  # expanded / collapsed
+if "did_run" not in st.session_state:
+    st.session_state.did_run = False
+
 st.set_page_config(
     page_title="LED Sphere Spec Calculator",
     page_icon="yenrich.png",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state=st.session_state.sidebar_state,  # ✅ key: try to control sidebar
 )
 
 # =============================
@@ -24,9 +33,8 @@ with header_col2:
 
 st.divider()
 
-
 # =============================
-# Sidebar – 核心輸入參數
+# Sidebar – Core Inputs
 # =============================
 with st.sidebar:
     st.header("Input Parameters")
@@ -80,9 +88,14 @@ with st.sidebar:
 
     run_btn = st.button("Calculate", type="primary")
 
+    # ✅ When user clicks Calculate: mark ran + request sidebar collapse + rerun
+    if run_btn:
+        st.session_state.did_run = True
+        st.session_state.sidebar_state = "collapsed"
+        st.rerun()
 
 # =============================
-# 固定工程參數（客戶看不到）
+# Internal Engineering Defaults (hidden from customers)
 # =============================
 param = {
     "diameter": diameter,
@@ -103,23 +116,38 @@ param = {
     "calibration_ratio": 0.1,
 }
 
-
 # =============================
-# 計算與顯示結果
+# Results
 # =============================
-if run_btn:
+if st.session_state.get("did_run", False):
     try:
         result = calculate(param)
 
-        # ===== KPI 區 =====
+        # ✅ Anchor for auto scroll (mobile-friendly)
+        st.markdown('<div id="result"></div>', unsafe_allow_html=True)
+
+        # ✅ Clear feedback for first-time users (especially on mobile)
+        st.toast("Result is ready! Collapse the input panel to view it.", icon="✅")
+
+        # ✅ Try to auto-scroll to results (works in many mobile/desktop cases)
+        st.markdown(
+            """
+            <script>
+              const el = window.parent.document.querySelector('div#result');
+              if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ===== KPI =====
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Pitch (mm)", f'{result["pitch_mm"]:.3f}')
         c2.metric("Module types (Vertical)", f'{result["n_vertical_final"]}')
         c3.metric("Module Qty. (H)", f'{result["n_equator_final"]}')
         c4.metric("Total Power (kW)", f'{result["total_power_W"]:.2f}')
 
-
-        # ===== LED / IC 表格 =====
+        # ===== Spec Table =====
         st.divider()
         st.subheader("Product Specification")
 
@@ -152,14 +180,14 @@ if run_btn:
             ]
         })
 
-        # ✅ 讓整欄都是 string，避免 pyarrow 嘗試轉成 double
+        # ✅ Make whole column string to avoid pyarrow type coercion issues
         spec_df["Dome Display"] = spec_df["Dome Display"].astype(str)
 
         st.table(spec_df.set_index("Product"))
 
         st.divider()
 
-        # ===== 球面預覽 =====
+        # ===== Sphere Preview =====
         st.subheader("Sphere Layout Preview")
 
         colA, colB = st.columns(2)
@@ -192,8 +220,10 @@ if run_btn:
             )
             st.pyplot(figB, clear_figure=True)
 
+
+
     except Exception as e:
         st.error(f"Calculation failed: {e}")
 
 else:
-    st.info("Fill in the parameters on the left and click Calculate.")
+    st.info("Click the >> button in the top-left corner, fill in the parameters and click Calculate.")
