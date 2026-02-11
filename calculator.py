@@ -191,7 +191,7 @@ def calculate(param: dict) -> dict:
         # basics
         "pitch_mm": pitch,
         "fov_v_deg": fov_v,
-        "resolution_v_px": resolution_v,
+        "resolution_v_final": resolution_v_final,
         "receiver_capacity": receiver_capacity,
 
         # module H/V

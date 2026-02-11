@@ -10,6 +10,7 @@ st.set_page_config(
     layout="wide",
 )
 
+
 # =============================
 # Header (Logo + Title)
 # =============================
@@ -149,7 +150,7 @@ if run_btn:
                 round(result["display_area"], 2),
                 round(result["pitch_mm"], 2),
                 int(param["resolution_h"]),
-                int(result["resolution_v_px"]),
+                int(result["resolution_v_final"]),
                 round(param["fov_h"], 2),
                 round(result["fov_v_deg"], 2),
                 int(result["n_vertical_final"]),
