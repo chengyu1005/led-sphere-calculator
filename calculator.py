@@ -152,6 +152,7 @@ def calculate(param: dict) -> dict:
     total_n_pwm = sum(n_module_pwm_counts) * n_equator_final
     total_n_module = n_equator_final * n_vertical_final
     total_n_hub = total_n_module / n_module_per_receiver
+    total_n_controller = math.ceil(px_per_module_h * px_per_module_v * total_n_module / 3840 / 2160)
 
     # ===== Power（保留你原本常數與邏輯）=====
     LED_0606_R, LED_0606_G, LED_0606_B = 12.09, 27.59, 5.09
@@ -186,6 +187,17 @@ def calculate(param: dict) -> dict:
     LED_power = (R_LED_power + G_LED_power + B_LED_power) * total_n_led * 1000
     system_power = (total_n_pwm + total_n_scan) * 0.006 * GB_V + total_n_hub * 3
     total_power = (LED_power + system_power) * 1.2
+
+    weight = display_area / 10.4576 * 870
+
+    if fov_h <= 180:
+        room_size_w = diameter * math.sin((fov_h/2)/180*math.pi) + 3000
+        room_size_l = diameter / 2  - (diameter / 2 * math.cos((fov_h/2)/180*math.pi)) + 3000
+    else:
+        room_size_w = diameter + 3000
+        room_size_l = diameter / 2  + (diameter / 2 * math.sin(((fov_h-180)/2)/180*math.pi)) + 3000
+
+    room_size_h = diameter / 2 * (math.sin(fov_v_n_final/180*math.pi) + math.sin(fov_v_s_final/180*math.pi)) + 1500
 
     return {
         # basics
@@ -231,6 +243,7 @@ def calculate(param: dict) -> dict:
         "total_n_scan": total_n_scan,
         "total_n_module": total_n_module,
         "total_n_hub": total_n_hub,
+        "total_n_controller": total_n_controller,
 
         # power
         "R_current_mA": R_current,
@@ -239,6 +252,12 @@ def calculate(param: dict) -> dict:
         "LED_power_W": LED_power,
         "system_power_W": system_power,
         "total_power_W": total_power/1000,
+
+        # mechanical
+        "weight": weight,
+        "room_size_w": room_size_w,
+        "room_size_l": room_size_l,
+        "room_size_h": room_size_h,
     }
 
 
