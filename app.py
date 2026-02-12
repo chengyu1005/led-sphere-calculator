@@ -3,6 +3,8 @@ import pandas as pd
 import streamlit as st
 from calculator import calculate, make_sphere_fig
 from datetime import datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 st.set_page_config(
@@ -84,7 +86,8 @@ if "document_no" not in st.session_state:
     st.session_state["document_no"] = ""
 
 if run_btn:
-    date_code = datetime.now().strftime("%Y%m%d%H%M%S")
+    now_tpe = datetime.now(ZoneInfo("Asia/Taipei"))
+    date_code = now_tpe.strftime("%Y%m%d%H%M%S")
     st.session_state["document_no"] = f"{safe_project_name}_{date_code}"
 
 document_no = st.session_state["document_no"]
