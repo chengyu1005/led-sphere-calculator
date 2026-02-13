@@ -72,6 +72,13 @@ with st.sidebar:
         index=0
     )
 
+    bottom_edge_height = st.number_input(
+        "Bottom Edge Height Above Floor (mm)",
+        value=500.0,
+        step=1.0,
+        format="%.1f"
+    )
+
     run_btn = st.button("Calculate", type="primary")
 
 
@@ -100,6 +107,7 @@ param = {
     "resolution_h": resolution_h,
     "luminance": luminance,
     "frame_rate": frame_rate,
+    "bottom_edge_height": bottom_edge_height,
 
     # 🔒 Internal Engineering Defaults
     "module_angle_limit": 6,
@@ -175,6 +183,9 @@ if run_btn:
     if luminance <= 0:
         missing_fields.append("Luminance must be greater than 0")
 
+    if bottom_edge_height < 0:
+        missing_fields.append("Bottom Edge Height cannot be negative")
+
     if missing_fields:
         st.error(
             "⚠️ Please correct the following:\n\n"
@@ -217,7 +228,7 @@ if run_btn:
             weight_display = math.ceil(result["weight"])
             room_w_display = math.ceil(result["room_size_w"])
             room_l_display = math.ceil(result["room_size_l"])
-            room_h_display = f'{math.ceil(result["room_size_h"])} + Bottom Edge Height Above Floor'
+            room_h_display = math.ceil(result["room_size_h"])
 
         spec_df = pd.DataFrame({
             "Product": [
@@ -272,35 +283,69 @@ if run_btn:
         st.divider()
         st.subheader("Sphere Layout Preview")
 
-        colA, colB = st.columns(2)
+        # 10m threshold (diameter in mm)
+        need_superstructure_eval = param["diameter"] >= 10000
 
-        with colA:
-            figA = make_sphere_fig(
+        # 三欄：若超過 10m，只顯示前兩張
+        cols = st.columns(2 if need_superstructure_eval else 3)
+
+        # 1) 正視
+        with cols[0]:
+            fig1 = make_sphere_fig(
                 diameter=param["diameter"],
                 fov_h=param["fov_h"],
                 fov_v_n_final=result["fov_v_n_final"],
                 fov_v_s_final=result["fov_v_s_final"],
                 n_equator_final=result["n_equator_final"],
                 n_vertical_final=result["n_vertical_final"],
+                bottom_edge_height=param.get("bottom_edge_height", 0.0),
+                show_room_box=False,
                 elev=0,
                 azim=180,
-                title="View A"
+                title="View 1 (Front)"
             )
-            st.pyplot(figA, clear_figure=True)
+            st.pyplot(fig1, clear_figure=True)
 
-        with colB:
-            figB = make_sphere_fig(
+        # 2) 斜視（不要框）
+        with cols[1]:
+            fig2 = make_sphere_fig(
                 diameter=param["diameter"],
                 fov_h=param["fov_h"],
                 fov_v_n_final=result["fov_v_n_final"],
                 fov_v_s_final=result["fov_v_s_final"],
                 n_equator_final=result["n_equator_final"],
                 n_vertical_final=result["n_vertical_final"],
-                elev=15,
-                azim=230,
-                title="View B"
+                bottom_edge_height=param.get("bottom_edge_height", 0.0),
+                show_room_box=False,
+                elev=25,
+                azim=-145,
+                title="View 2 (Iso)"
             )
-            st.pyplot(figB, clear_figure=True)
+            st.pyplot(fig2, clear_figure=True)
+
+        # 3) 斜視（要框）— 只在 <10m 顯示
+        if not need_superstructure_eval:
+            with cols[2]:
+                fig3 = make_sphere_fig(
+                    diameter=param["diameter"],
+                    fov_h=param["fov_h"],
+                    fov_v_n_final=result["fov_v_n_final"],
+                    fov_v_s_final=result["fov_v_s_final"],
+                    n_equator_final=result["n_equator_final"],
+                    n_vertical_final=result["n_vertical_final"],
+                    room_w=result["room_size_w"],
+                    room_l=result["room_size_l"],
+                    room_h=result["room_size_h"],
+                    bottom_edge_height=param.get("bottom_edge_height", 0.0),
+                    show_room_box=True,
+                    show_room_dims=True,  # 你要的 W/L/H 文字
+                    flip_xy=False,  # 若你 View 3 要左下開口就留著
+                    elev=25,
+                    azim=-145,
+                    title="Recommended Room Dimensions"
+                )
+                st.pyplot(fig3, clear_figure=True)
+
 
     except Exception as e:
         st.error(f"Calculation failed: {e}")

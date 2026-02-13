@@ -19,6 +19,7 @@ def calculate(param: dict) -> dict:
     scan_ratio_limit = int(param["scan_ratio_limit"])
     channel_threshold_for_double_scan = param["channel_threshold_for_double_scan"]
     calibration_ratio = param["calibration_ratio"]
+    bottom_edge_height = float(param.get("bottom_edge_height", 0.0))
 
     arc_h = math.pi * diameter * (fov_h / 360)
     pitch = arc_h / resolution_h
@@ -197,7 +198,7 @@ def calculate(param: dict) -> dict:
         room_size_w = diameter + 3000
         room_size_l = diameter / 2  + (diameter / 2 * math.sin(((fov_h-180)/2)/180*math.pi)) + 3000
 
-    room_size_h = diameter / 2 * (math.sin(fov_v_n_final/180*math.pi) + math.sin(fov_v_s_final/180*math.pi)) + 1500
+    room_size_h = diameter / 2 * (math.sin(fov_v_n_final/180*math.pi) + math.sin(fov_v_s_final/180*math.pi)) + 1500 + bottom_edge_height
 
     return {
         # basics
@@ -261,7 +262,16 @@ def calculate(param: dict) -> dict:
     }
 
 
-def make_sphere_fig(diameter, fov_h, fov_v_n_final, fov_v_s_final, n_equator_final, n_vertical_final, elev, azim, title):
+def make_sphere_fig(
+    diameter, fov_h, fov_v_n_final, fov_v_s_final,
+    n_equator_final, n_vertical_final,
+    elev, azim, title,
+    room_w=None, room_l=None, room_h=None,
+    bottom_edge_height=0.0,
+    show_room_box=False,
+    flip_xy=False,   # ✅ 把球與框在 XY 平面旋轉 180°
+    show_room_dims=False,  # ✅ 新增：標出 W/L/H
+):
     R = diameter / 2
     fov_v_n = float(fov_v_n_final)
     fov_v_s = float(fov_v_s_final)
@@ -279,35 +289,168 @@ def make_sphere_fig(diameter, fov_h, fov_v_n_final, fov_v_s_final, n_equator_fin
     y = R * np.sin(theta) * np.sin(phi)
     z = R * np.cos(theta)
 
+    # =============================
+    # Z 對齊：最低點 = bottom_edge_height
+    # =============================
+    z_min = float(np.min(z))
+    z_shift = float(bottom_edge_height) - z_min
+    z = z + z_shift
+
     phi_eq = np.linspace(phi_min, phi_max, 400)
     theta_eq = np.deg2rad(90)
     x_eq = R * np.sin(theta_eq) * np.cos(phi_eq)
     y_eq = R * np.sin(theta_eq) * np.sin(phi_eq)
-    z_eq = R * np.cos(theta_eq) * np.ones_like(phi_eq)
+    z_eq = (R * np.cos(theta_eq) * np.ones_like(phi_eq)) + z_shift
+
+    # =============================
+    # 方向翻轉（XY 旋轉 180°）
+    # =============================
+    if flip_xy:
+        x = -x
+        y = -y
+        x_eq = -x_eq
+        y_eq = -y_eq
 
     fig = plt.figure(figsize=(7, 7))
     ax = fig.add_subplot(111, projection="3d")
-    ax.plot_surface(x, y, z, color="lightblue", edgecolor="gray", linewidth=0.2, alpha=0.85)
+
+    # ===== 球面 =====
+    ax.plot_surface(
+        x, y, z,
+        color="lightblue",
+        edgecolor="gray",
+        linewidth=0.2,
+        alpha=0.85
+    )
     ax.plot(x_eq, y_eq, z_eq, linewidth=2.0)
 
+    # ===== 垂直分割線 =====
     phi_lines = np.linspace(phi_min, phi_max, n_equator_final + 1)
     for p in phi_lines:
         th_line = np.linspace(theta_min, theta_max, 200)
-        ax.plot(R * np.sin(th_line) * np.cos(p),
-                R * np.sin(th_line) * np.sin(p),
-                R * np.cos(th_line),
-                color="black", linewidth=0.5)
+        gx = R * np.sin(th_line) * np.cos(p)
+        gy = R * np.sin(th_line) * np.sin(p)
+        gz = (R * np.cos(th_line)) + z_shift
+        if flip_xy:
+            gx, gy = -gx, -gy
+        ax.plot(gx, gy, gz, color="black", linewidth=0.5)
 
+    # ===== 水平分割線 =====
     theta_lines = np.linspace(theta_min, theta_max, n_vertical_final + 1)
     for t in theta_lines:
         ph_line = np.linspace(phi_min, phi_max, 400)
-        ax.plot(R * np.sin(t) * np.cos(ph_line),
-                R * np.sin(t) * np.sin(ph_line),
-                R * np.cos(t) * np.ones_like(ph_line),
-                color="black", linewidth=0.5)
+        gx = R * np.sin(t) * np.cos(ph_line)
+        gy = R * np.sin(t) * np.sin(ph_line)
+        gz = (R * np.cos(t) * np.ones_like(ph_line)) + z_shift
+        if flip_xy:
+            gx, gy = -gx, -gy
+        ax.plot(gx, gy, gz, color="black", linewidth=0.5)
 
-    ax.set_box_aspect([1, 1, 1])
+    # =============================
+    # 可選：Room Box（XY 置中，地面=0）
+    # =============================
+    def draw_room_box(ax, w, l, h):
+        x0, x1 = -l / 2, l / 2
+        y0, y1 = -w / 2, w / 2
+        z0, z1 = 0.0, h
+
+        corners = [
+            (x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
+            (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1),
+        ]
+
+        edges = [
+            (0,1),(1,2),(2,3),(3,0),
+            (4,5),(5,6),(6,7),(7,4),
+            (0,4),(1,5),(2,6),(3,7)
+        ]
+
+        for i, j in edges:
+            ax.plot(
+                [corners[i][0], corners[j][0]],
+                [corners[i][1], corners[j][1]],
+                [corners[i][2], corners[j][2]],
+                color="#6C86B7",
+                linewidth=1.0,
+                alpha=0.8
+            )
+
+    # ✅ Room box
+    if show_room_box and (room_w is not None) and (room_l is not None) and (room_h is not None):
+        rw = float(room_w)
+        rl = float(room_l)
+        rh = float(room_h)
+
+        draw_room_box(ax, rw, rl, rh)
+
+        # =============================
+        # ✅ Room dimension annotations (W/L/H)
+        # 放在「畫完框」之後、「Fix aspect」之前
+        # =============================
+        if show_room_dims:
+            off = 0.07
+            x0, x1 = -rl / 2, rl / 2
+            y0, y1 = -rw / 2, rw / 2
+            z0 = 0.0
+
+            y_dim = y0 - rw * off
+            x_dim = x0 - rl * off
+
+            # L (X方向)
+            ax.text((x0 + x1) / 2, y_dim, z0,
+                    f"L = {math.ceil(rl)} mm",
+                    ha="center", va="top")
+
+            # W (Y方向)
+            ax.text(x_dim, (y0 + y1) / 2, z0,
+                    f"W = {math.ceil(rw)} mm",
+                    ha="right", va="center")
+
+            # H (Z方向)
+            ax.text(x_dim, y_dim, rh / 2,
+                    f"H = {math.ceil(rh)} mm",
+                    ha="right", va="center")
+
+    # =============================
+    # Fix aspect so sphere won't distort
+    # =============================
+    x_min, x_max = float(np.min(x)), float(np.max(x))
+    y_min, y_max = float(np.min(y)), float(np.max(y))
+    z_min, z_max = float(np.min(z)), float(np.max(z))
+
+    if show_room_box and (room_w is not None) and (room_l is not None) and (room_h is not None):
+        rw = float(room_w)
+        rl = float(room_l)
+        rh = float(room_h)
+
+        x_min = min(x_min, -rl / 2)
+        x_max = max(x_max, rl / 2)
+        y_min = min(y_min, -rw / 2)
+        y_max = max(y_max, rw / 2)
+        z_min = min(z_min, 0.0)
+        z_max = max(z_max, rh)
+
+    pad = 0.05
+    xr = x_max - x_min
+    yr = y_max - y_min
+    zr = z_max - z_min
+
+    x_min -= xr * pad
+    x_max += xr * pad
+    y_min -= yr * pad
+    y_max += yr * pad
+    z_min -= zr * pad
+    z_max += zr * pad
+
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+    ax.set_zlim(z_min, z_max)
+
+    ax.set_box_aspect([x_max - x_min, y_max - y_min, z_max - z_min])
+
     ax.set_axis_off()
     ax.view_init(elev=elev, azim=azim)
     plt.title(title)
     return fig
+
+
