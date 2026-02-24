@@ -2,6 +2,7 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import proj3d
 
 
 def calculate(param: dict) -> dict:
@@ -271,6 +272,7 @@ def make_sphere_fig(
     show_room_box=False,
     flip_xy=False,   # ✅ 把球與框在 XY 平面旋轉 180°
     show_room_dims=False,  # ✅ 新增：標出 W/L/H
+    show_height_dims=False,
 ):
     R = diameter / 2
     fov_v_n = float(fov_v_n_final)
@@ -311,7 +313,7 @@ def make_sphere_fig(
         x_eq = -x_eq
         y_eq = -y_eq
 
-    fig = plt.figure(figsize=(7, 7))
+    fig = plt.figure(figsize=(6,6), dpi=120)
     ax = fig.add_subplot(111, projection="3d")
 
     # ===== 球面 =====
@@ -345,6 +347,8 @@ def make_sphere_fig(
         if flip_xy:
             gx, gy = -gx, -gy
         ax.plot(gx, gy, gz, color="black", linewidth=0.5)
+
+
 
     # =============================
     # 可選：Room Box（XY 置中，地面=0）
@@ -442,15 +446,143 @@ def make_sphere_fig(
     z_min -= zr * pad
     z_max += zr * pad
 
-    ax.set_xlim(x_min, x_max)
+
     ax.set_ylim(y_min, y_max)
     ax.set_zlim(z_min, z_max)
 
-    ax.set_box_aspect([x_max - x_min, y_max - y_min, z_max - z_min])
+    ax.set_box_aspect([1,1,1])
 
     ax.set_axis_off()
     ax.view_init(elev=elev, azim=azim)
+
+    # =============================
+    # Front view height diagram
+    # Display arrow = exact sphere height
+    # Bottom arrow = proportional scale
+    # =============================
+    if show_height_dims:
+        # ----- physical heights (mm)
+        display_height_mm = (diameter / 2.0) * (
+                math.sin(math.radians(fov_v_n_final)) +
+                math.sin(math.radians(fov_v_s_final))
+        )
+
+        bhe_mm = float(bottom_edge_height)
+
+        # ----- projection helper
+        def proj_axes(x3, y3, z3):
+            x2, y2, _ = proj3d.proj_transform(x3, y3, z3, ax.get_proj())
+            xd, yd = ax.transData.transform((x2, y2))
+            xa, ya = ax.transAxes.inverted().transform((xd, yd))
+            return xa, ya
+
+        xf = x.flatten()
+        yf = y.flatten()
+        zf = z.flatten()
+
+        pts = [proj_axes(xf[i], yf[i], zf[i]) for i in range(len(xf))]
+
+        xa = np.array([p[0] for p in pts])
+        ya = np.array([p[1] for p in pts])
+
+        # ----- sphere silhouette
+        y_top = float(np.max(ya))
+        y_bottom = float(np.min(ya))
+
+        # ----- arrow X position
+        x_dim = min(0.965, np.max(xa) + 0.04)
+
+        # ----- proportional scaling
+        display_len = y_top - y_bottom
+
+        ratio = bhe_mm / display_height_mm
+
+        bottom_len = display_len * ratio
+
+        y_floor = y_bottom - bottom_len
+
+        # ----- clamp
+        def clamp(v):
+            return max(0.02, min(0.98, v))
+
+        y_top = clamp(y_top)
+        y_bottom = clamp(y_bottom)
+        y_floor = clamp(y_floor)
+
+        tr = ax.transAxes
+
+        arrow_kw = dict(
+            arrowstyle="<->",
+            linewidth=1.5,
+            color="black",
+            shrinkA=0,
+            shrinkB=0,
+            mutation_scale=12
+        )
+
+        bbox_kw = dict(
+            boxstyle="round,pad=0.2",
+            fc="white",
+            ec="none",
+            alpha=0.9
+        )
+
+        # ----- floor line
+        ax.plot(
+            [x_dim - 0.08, x_dim + 0.02],
+            [y_floor, y_floor],
+            transform=tr,
+            color="black",
+            linewidth=3
+        )
+
+        # ----- display arrow
+        ax.annotate(
+            "",
+            xy=(x_dim, y_top),
+            xytext=(x_dim, y_bottom),
+            xycoords=tr,
+            textcoords=tr,
+            arrowprops=arrow_kw
+        )
+
+        ax.text2D(
+            x_dim + 0.015,
+            (y_top + y_bottom) / 2,
+            f"{int(round(display_height_mm))}mm",
+            transform=tr,
+            fontsize=13,
+            bbox=bbox_kw
+        )
+
+        # ----- bottom arrow
+        ax.annotate(
+            "",
+            xy=(x_dim, y_bottom),
+            xytext=(x_dim, y_floor),
+            xycoords=tr,
+            textcoords=tr,
+            arrowprops=arrow_kw
+        )
+
+        ax.text2D(
+            x_dim + 0.015,
+            (y_floor + y_bottom) / 2,
+            f"{int(round(bhe_mm))}mm",
+            transform=tr,
+            fontsize=13,
+            bbox=bbox_kw
+        )
+
+
+
     plt.title(title)
+    plt.subplots_adjust(
+        left=0.06,
+        right=0.94,
+        bottom=0.06,
+        top=0.92
+    )
     return fig
 
 
