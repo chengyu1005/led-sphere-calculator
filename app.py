@@ -268,7 +268,7 @@ if st.session_state["has_result"]:
             round(result["display_area"], 2),
             round(result["pitch_mm"], 3),
             f'{int(param_used["resolution_h"])} × {int(result["resolution_v_final"])}',
-            f'{round(param_used["fov_h"], 2)}{deg} × {round(result["fov_v_deg"], 2)}{deg}',
+            f'{round(param_used["fov_h"], 2)}{deg} × {round(result["fov_v_n_final"], 2)+round(result["fov_v_s_final"], 2)}{deg}',
             int(result["n_vertical_final"]),
             f'{result["width_per_module_mm"]:.2f} x {result["height_per_module_mm"]:.2f}',
             int(result["total_n_module"]),

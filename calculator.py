@@ -71,7 +71,7 @@ def calculate(param: dict) -> dict:
     else:
         n_vertical_final = cands[0]
         base = 4 * n_vertical_final
-        resolution_v_final = max(base, int(round(resolution_v / base) * base))
+        resolution_v_final = max(base, (int(resolution_v // base) * base))
         arc_v_final = pitch * resolution_v_final
         fov_v_final = arc_v_final * 360 / (math.pi * diameter)
 
