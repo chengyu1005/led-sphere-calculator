@@ -94,6 +94,8 @@ def calculate(param: dict) -> dict:
         n_module_per_receiver = 8
     elif px_per_module_h * px_per_module_v * 4 <= receiver_capacity:
         n_module_per_receiver = 4
+    elif px_per_module_h * px_per_module_v * 2 <= receiver_capacity:
+        n_module_per_receiver = 2
     else:
         n_module_per_receiver = 1
 
@@ -411,9 +413,9 @@ def make_sphere_fig(
                     ha="right", va="center")
 
             # H (Z方向)
-            ax.text(x_dim, y_dim, rh / 2,
+            ax.text(x_dim, y_dim, rh *1.1,
                     f"H = {math.ceil(rh)} mm",
-                    ha="right", va="center")
+                    ha="right", va="bottom")
 
     # =============================
     # Fix aspect so sphere won't distort
