@@ -323,17 +323,23 @@ def get_led_options_by_pitch(pitch_mm: float) -> dict:
     elif pitch_mm <= 1.7:
         return {
             "MIP-C1010TM": 2.78,
+            "MIP-C0606TM": 2.11,
+            "LSSF0606CC2": 3.2,
+            "LSSF0606CC3": 2.78,
         }
     elif pitch_mm <= 2.2:
         return {
             "NH1515": 1.35,
             "RS1515": 5.04,
+            "MIP-C1010TM": 2.78,
         }
     else:
         return {
             "NH2020": 2.14,
             "FM2020": 4.71,
             "RS2020": 7.43,
+            "NH1515": 1.35,
+            "RS1515": 5.04,
         }
 
 
@@ -347,6 +353,7 @@ def get_part_catalog(pitch_mm: float) -> dict:
         "RX": {"AUO-R3E": 35, "Mooncell-A10X": 21.2},
         "Controller": {"AUO-D4000": 2000, "Mooncell-B2000ES": 1686},
         "PSU": {"UHP-200": 28.01},
+        "Mechanical": {"mechanical": 600},
     }
 
 @st.fragment
@@ -368,6 +375,7 @@ def render_bom(show_bom: bool, result: dict):
         "RX": int(result["total_n_hub"]),
         "Controller": int(result["total_n_controller"]),
         "PSU": int(result["total_n_hub"]),
+        "Mechanical": round(result["display_area"], 1),
     }
 
     if not st.session_state["quote_parts"]:
@@ -430,6 +438,8 @@ def render_bom(show_bom: bool, result: dict):
         if item == "LED":
             unit = "kpcs"
         elif item == "Module (PCB)":
+            unit = "m²"
+        elif item == "Mechanical":
             unit = "m²"
         else:
             unit = "pcs"
