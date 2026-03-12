@@ -342,6 +342,15 @@ def get_led_options_by_pitch(pitch_mm: float) -> dict:
             "RS1515": 5.04,
         }
 
+def get_mechanical(diameter: float) -> dict:
+    if diameter < 10000:
+        return {
+            "Mechanical": 600,
+        }
+    else:
+        return {
+            "Mechanical": 0,
+        }
 
 def get_part_catalog(pitch_mm: float) -> dict:
     return {
@@ -353,7 +362,7 @@ def get_part_catalog(pitch_mm: float) -> dict:
         "RX": {"AUO-R3E": 35, "Mooncell-A10X": 21.2},
         "Controller": {"AUO-D4000": 2000, "Mooncell-B2000ES": 1686},
         "PSU": {"UHP-200": 28.01},
-        "Mechanical": {"mechanical": 600},
+        "Mechanical": get_mechanical(diameter),
     }
 
 @st.fragment
