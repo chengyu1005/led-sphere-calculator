@@ -371,7 +371,7 @@ def render_bom(show_bom: bool, result: dict):
         return
 
     st.divider()
-    st.subheader("Key component List (Quantity)")
+    st.subheader("Key Component List (Quantity)")
 
     PART_CATALOG = get_part_catalog(result["pitch_mm"])
 
@@ -463,7 +463,7 @@ def render_bom(show_bom: bool, result: dict):
             st.write(f"{total_price:,.2f}")
 
     st.markdown("---")
-    st.metric("Key component cost (USD)", f"{grand_total:,.2f}")
+    st.metric("Reference Key Component Cost (USD)", f"{grand_total:,.2f}")
 
 # =============================
 # Display Area
